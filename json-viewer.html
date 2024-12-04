@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Document Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .section {
+            margin-left: 20px;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .level-1 {
+            font-size: 24px;
+            color: #2c3e50;
+        }
+        .level-2 {
+            font-size: 20px;
+            color: #34495e;
+            margin-left: 20px;
+        }
+        .content {
+            margin-left: 20px;
+        }
+        .paragraph {
+            margin: 10px 0;
+        }
+        .paragraph-number {
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+        .sub-item {
+            margin-left: 20px;
+        }
+        .footnote {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            font-style: italic;
+            margin: 10px 0;
+            padding-left: 20px;
+            border-left: 3px solid #eee;
+        }
+        .footnote-ref {
+            font-size: 0.8em;
+            vertical-align: super;
+            color: #2980b9;
+            text-decoration: none;
+        }
+        .footnote-ref:hover {
+            text-decoration: underline;
+        }
+        .footnote-number {
+            font-weight: bold;
+            color: #2980b9;
+        }
+        .footnotes-section {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+        .footnotes-title {
+            font-size: 20px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .table-container {
+            max-width: 100%;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        table {
+            border-collapse: collapse;
+            margin: 0;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            min-width: 100px;
+            white-space: normal;
+            word-wrap: break-word;
+            max-width: 300px;
+        }
+        th {
+            background-color: #f5f6fa;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        #fileInput {
+            margin: 20px 0;
+            padding: 10px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #content {
+            margin-top: 20px;
+        }
+        .upload-container {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .upload-box {
+            flex: 1;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .upload-box.drag-over {
+            border-color: #2980b9;
+            background-color: #f7f9fc;
+        }
+        
+        .upload-box h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .upload-box input {
+            display: none;
+        }
+        
+        .upload-box label {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .upload-box label:hover {
+            background-color: #2980b9;
+        }
+        
+        #loadingIndicator {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            color: #2c3e50;
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #e74c3c;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="upload-container">
+        <div class="upload-box" id="jsonUploadBox">
+            <h3>Upload JSON</h3>
+            <p>Upload a previously converted JSON file</p>
+            <input type="file" id="jsonInput" accept=".json">
+            <label for="jsonInput">Choose JSON File</label>
+        </div>
+        
+        <div class="upload-box" id="pdfUploadBox">
+            <h3>Upload PDF</h3>
+            <p>Upload a PDF file for conversion</p>
+            <input type="file" id="pdfInput" accept=".pdf">
+            <label for="pdfInput">Choose PDF File</label>
+        </div>
+    </div>
+    
+    <div id="loadingIndicator">Converting PDF... Please wait...</div>
+    <div id="errorMessage" class="error-message"></div>
+    <div id="content"></div>
+
+    <script>
+        const footnotes = [];
+
+        function processFootnoteRefs(text) {
+            const pattern = /\$\^{(\d+)}\$/g;
+            return text.replace(pattern, (match, num) => 
+                `<a href="#footnote-${num}" class="footnote-ref">${num}</a>`);
+        }
+
+        function renderContent(contentItem) {
+            switch(contentItem.type) {
+                case "paragraph":
+                    const number = contentItem.number || "";
+                    const text = processFootnoteRefs(contentItem.text);
+                    return number 
+                        ? `<div class="paragraph"><span class="paragraph-number">${number}</span> ${text}</div>`
+                        : `<div class="paragraph">${text}</div>`;
+
+                case "sub_item":
+                    return `<div class="paragraph sub-item">${processFootnoteRefs(contentItem.text)}</div>`;
+
+                case "footnote":
+                    footnotes.push(contentItem);
+                    return "";
+
+                case "table":
+                    if (!contentItem.rows?.length) return "";
+                    
+                    const rows = contentItem.rows.map((row, index) => {
+                        const cells = row.map(cell => 
+                            index === 0 ? `<th>${cell}</th>` : `<td>${cell}</td>`
+                        ).join('');
+                        return `<tr>${cells}</tr>`;
+                    }).join('');
+                    
+                    return `<div class="table-container"><table>${rows}</table></div>`;
+
+                default:
+                    return "";
+            }
+        }
+
+        function createSectionId(title) {
+            return title
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric chars with hyphens
+                .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+        }
+
+        function renderSection(section, level = 1) {
+            const sectionId = createSectionId(section.title);
+            let html = `<div class="section">
+                <div id="${sectionId}" class="section-title level-${level}">
+                    <a href="#${sectionId}" style="color: inherit; text-decoration: none;">
+                        ${section.title}
+                    </a>
+                </div>`;
+
+            if (section.content?.length) {
+                html += `<div class="content">
+                    ${section.content.map(item => renderContent(item)).join('')}
+                </div>`;
+            }
+
+            if (section.subsections?.length) {
+                html += section.subsections.map(subsection => 
+                    renderSection(subsection, level + 1)).join('');
+            }
+
+            return html + '</div>';
+        }
+
+        function renderFootnotes() {
+            if (!footnotes.length) return '';
+
+            const footnotesHtml = footnotes.map(footnote => {
+                const match = footnote.text.match(/^(\d+)\s+(.+)$/);
+                if (match) {
+                    const [_, num, text] = match;
+                    return `<div id="footnote-${num}" class="footnote">
+                        <span class="footnote-number">${num}</span> ${text}
+                    </div>`;
+                }
+                return `<div class="footnote">${footnote.text}</div>`;
+            }).join('');
+
+            return `<div class="footnotes-section">
+                <div class="footnotes-title">Footnotes</div>
+                ${footnotesHtml}
+            </div>`;
+        }
+
+        function renderDocument(doc) {
+            footnotes.length = 0; // Clear footnotes array
+            const mainContent = doc.document.map(section => renderSection(section)).join('');
+            return mainContent + renderFootnotes();
+        }
+
+        async function handlePdfUpload(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('content').innerHTML = '';
+            
+            try {
+                const response = await fetch('/convert/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const doc = await response.json();
+                document.getElementById('content').innerHTML = renderDocument(doc);
+            } catch (error) {
+                console.error('Error converting PDF:', error);
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = `Error converting PDF: ${error.message}`;
+                errorMessage.style.display = 'block';
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        }
+
+        async function handleJsonUpload(file) {
+            try {
+                const text = await file.text();
+                const doc = JSON.parse(text);
+                document.getElementById('errorMessage').style.display = 'none';
+                document.getElementById('content').innerHTML = renderDocument(doc);
+            } catch (error) {
+                console.error('Error parsing JSON:', error);
+                const errorMessage = document.getElementById('errorMessage');
+                errorMessage.textContent = `Error parsing JSON file: ${error.message}`;
+                errorMessage.style.display = 'block';
+            }
+        }
+
+        // Set up drag and drop for both upload boxes
+        ['jsonUploadBox', 'pdfUploadBox'].forEach(boxId => {
+            const box = document.getElementById(boxId);
+            
+            box.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                box.classList.add('drag-over');
+            });
+            
+            box.addEventListener('dragleave', () => {
+                box.classList.remove('drag-over');
+            });
+            
+            box.addEventListener('drop', (e) => {
+                e.preventDefault();
+                box.classList.remove('drag-over');
+                
+                const file = e.dataTransfer.files[0];
+                if (boxId === 'jsonUploadBox' && file.type === 'application/json') {
+                    handleJsonUpload(file);
+                } else if (boxId === 'pdfUploadBox' && file.type === 'application/pdf') {
+                    handlePdfUpload(file);
+                }
+            });
+        });
+
+        // Set up file input handlers
+        document.getElementById('jsonInput').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) handleJsonUpload(file);
+        });
+
+        document.getElementById('pdfInput').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) handlePdfUpload(file);
+        });
+    </script>
+</body>
+</html>
+    

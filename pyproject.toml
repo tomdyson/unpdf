@@ -1,0 +1,22 @@
+[project]
+name = "unpdf"
+version = "0.1.0"
+description = "Convert PDF documents into structured JSON, with a focus on financial and accounting documents"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [
+    { name = "Tom Dyson", email = "tom@example.com" }
+]
+dependencies = [
+    "docling==2.5.2",
+    "fastapi>=0.115.6",
+    "httpx>=0.28.0",
+    "python-multipart>=0.0.19",
+    "reportlab>=4.2.5",
+    "uvicorn>=0.32.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/tomdyson/unpdf"
+Repository = "https://github.com/tomdyson/unpdf.git"
