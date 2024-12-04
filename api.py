@@ -13,7 +13,6 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from recipes.registry import registry
-from unpdf import simplify_document
 
 # Global variable to store the converter
 doc_converter = None
@@ -108,8 +107,8 @@ async def convert_uploaded_pdf(file: UploadFile, recipe: str = "default"):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/convert/url")
-async def convert_pdf_from_url(url: str):
-    """Convert a PDF from a URL to JSON"""
+async def convert_pdf_from_url(url: str, recipe: str = "default"):
+    """Convert a PDF from a URL to JSON using specified recipe"""
     if not url.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="URL must point to a PDF file")
     
@@ -125,9 +124,12 @@ async def convert_pdf_from_url(url: str):
                 tmp_file.write(response.content)
                 tmp_path = tmp_file.name
         
+        # Get the requested recipe
+        conversion_recipe = registry.get_recipe(recipe)
+        
         # Process the PDF
         result = doc_converter.convert(tmp_path)
-        simplified_doc = simplify_document(result.document)
+        simplified_doc = conversion_recipe.simplify_document(result.document)
         
         # Clean up
         os.unlink(tmp_path)

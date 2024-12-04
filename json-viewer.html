@@ -187,13 +187,22 @@
         </div>
     </div>
     
+    <div id="recipeSelector" style="margin: 20px 0; display: none;">
+        <label for="recipe" style="margin-right: 10px;">Conversion Recipe:</label>
+        <select id="recipe" style="padding: 5px; min-width: 200px;">
+            <option value="default">Loading recipes...</option>
+        </select>
+        <span id="recipeDescription" style="margin-left: 10px; color: #666; font-style: italic;"></span>
+    </div>
+    
     <div id="loadingIndicator">Converting PDF... Please wait...</div>
     <div id="errorMessage" class="error-message"></div>
     <div id="content"></div>
 
     <script>
         const footnotes = [];
-
+        let recipes = [];
+        
         function processFootnoteRefs(text) {
             const pattern = /\$\^{(\d+)}\$/g;
             return text.replace(pattern, (match, num) => 
@@ -293,12 +302,14 @@
             const formData = new FormData();
             formData.append('file', file);
             
+            const recipe = document.getElementById('recipe').value;
+            
             document.getElementById('loadingIndicator').style.display = 'block';
             document.getElementById('errorMessage').style.display = 'none';
             document.getElementById('content').innerHTML = '';
             
             try {
-                const response = await fetch('/convert/upload', {
+                const response = await fetch(`/convert/upload?recipe=${recipe}`, {
                     method: 'POST',
                     body: formData
                 });
@@ -369,6 +380,45 @@
             const file = event.target.files[0];
             if (file) handlePdfUpload(file);
         });
+
+        // Fetch available recipes when page loads
+        async function fetchRecipes() {
+            try {
+                const response = await fetch('/recipes');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                recipes = data.recipes;
+                
+                const recipeSelect = document.getElementById('recipe');
+                recipeSelect.innerHTML = recipes.map(recipe => 
+                    `<option value="${recipe.name}">${recipe.name}</option>`
+                ).join('');
+                
+                // Show recipe description for the default selection
+                updateRecipeDescription();
+                
+                // Show the recipe selector
+                document.getElementById('recipeSelector').style.display = 'block';
+            } catch (error) {
+                console.error('Error fetching recipes:', error);
+            }
+        }
+        
+        // Update recipe description when selection changes
+        function updateRecipeDescription() {
+            const recipeName = document.getElementById('recipe').value;
+            const recipe = recipes.find(r => r.name === recipeName);
+            const description = recipe ? recipe.description : '';
+            document.getElementById('recipeDescription').textContent = description;
+        }
+        
+        // Add event listener for recipe selection change
+        document.getElementById('recipe').addEventListener('change', updateRecipeDescription);
+        
+        // Call fetchRecipes when page loads
+        fetchRecipes();
     </script>
 </body>
 </html>
