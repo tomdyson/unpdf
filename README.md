@@ -11,6 +11,7 @@ Convert PDF documents into structured JSON. unPDF extracts headings, sections, p
 - Intelligent section level inference
 - Table continuation detection and merging
 - Web interface for viewing converted documents
+- Multiple conversion recipes for different document types
 
 ## Quick Start
 
@@ -28,7 +29,7 @@ uv pip install -e .
 uvicorn api:app --reload
 
 # Or use the CLI
-python convert.py path/to/document.pdf
+python unpdf.py path/to/document.pdf
 ```
 
 Visit http://localhost:8000 for the web interface, or http://localhost:8000/docs for the API documentation.
@@ -55,10 +56,21 @@ uv pip install -e .
 
 ### Command Line Interface
 
-Convert a PDF file directly using the CLI:
+Convert a PDF file using the CLI:
 ```bash
-python convert.py path/to/document.pdf
+python unpdf.py path/to/document.pdf
 ```
+
+You can specify a conversion recipe for different document types:
+```bash
+python unpdf.py path/to/document.pdf --recipe frc     # Financial Reporting Council documents
+python unpdf.py path/to/document.pdf --recipe amnesty # Amnesty International documents
+```
+
+Available recipes:
+- `default`: Standard conversion (inherits from FRC recipe)
+- `frc`: Optimized for Financial Reporting Council documents
+- `amnesty`: Optimized for Amnesty International documents, handles repeated headers
 
 ### REST API
 
@@ -71,25 +83,60 @@ The API will be available at `http://localhost:8000` with interactive documentat
 
 #### API Endpoints
 
-1. **Convert PDF Upload**
+1. **List Available Recipes**
+   - Endpoint: `GET /recipes`
+   - Returns list of available conversion recipes and their descriptions
+   
+   Example using curl:
+   ```bash
+   curl http://localhost:8000/recipes
+   ```
+   
+   Example response:
+   ```json
+   {
+     "recipes": [
+       {
+         "name": "default",
+         "description": "Default conversion recipe that inherits FRC document processing behavior."
+       },
+       {
+         "name": "frc",
+         "description": "Recipe optimized for Financial Reporting Council (FRC) documents."
+       },
+       {
+         "name": "amnesty",
+         "description": "Recipe optimized for Amnesty International documents."
+       }
+     ]
+   }
+   ```
+
+2. **Convert PDF Upload**
    - Endpoint: `POST /convert/upload`
    - Accepts multipart form data with a PDF file
+   - Optional `recipe` query parameter to specify conversion recipe
    
    Example using curl:
    ```bash
+   # Basic conversion
    curl -X POST -F "file=@document.pdf" http://localhost:8000/convert/upload
+
+   # Using specific recipe
+   curl -X POST -F "file=@document.pdf" "http://localhost:8000/convert/upload?recipe=frc"
    ```
 
-2. **Convert PDF from URL**
+3. **Convert PDF from URL**
    - Endpoint: `POST /convert/url`
    - Accepts a URL parameter pointing to a PDF file
+   - Optional `recipe` query parameter to specify conversion recipe
    
    Example using curl:
    ```bash
-   curl -X POST "http://localhost:8000/convert/url?url=http://example.com/document.pdf"
+   curl -X POST "http://localhost:8000/convert/url?url=http://example.com/document.pdf&recipe=amnesty"
    ```
 
-3. **Health Check**
+4. **Health Check**
    - Endpoint: `GET /health`
    - Returns API health status
 
@@ -114,14 +161,8 @@ The converter produces JSON with the following structure:
                     "type": "table",
                     "caption": "Table Caption",
                     "rows": [
-                        [
-                            "Header 1",
-                            "Header 2"
-                        ],
-                        [
-                            "Cell 1",
-                            "Cell 2"
-                        ]
+                        ["Header 1", "Header 2"],
+                        ["Cell 1", "Cell 2"]
                     ]
                 }
             ],
@@ -140,6 +181,12 @@ The converter produces JSON with the following structure:
 
 ## Features in Detail
 
+### Conversion Recipes
+- Pluggable system for different document types
+- Each recipe can implement custom processing logic
+- Easy to add new recipes for specific document formats
+- Built-in recipes for common document types
+
 ### Section Hierarchy
 - Automatically detects section levels
 - Maintains parent-child relationships
@@ -155,6 +202,28 @@ The converter produces JSON with the following structure:
 - Detects and extracts tables
 - Merges split tables that span multiple pages
 - Preserves table structure and formatting
+
+## Creating Custom Recipes
+
+You can create custom recipes for specific document types:
+
+1. Create a new file in the `recipes` directory
+2. Inherit from `ConversionRecipe` base class
+3. Implement the `simplify_document` method
+4. Register the recipe in `recipes/registry.py`
+
+Example:
+```python
+from typing import Any, Dict, List
+from .base import ConversionRecipe
+
+class CustomRecipe(ConversionRecipe):
+    """Recipe for custom document format."""
+    
+    def simplify_document(self, doc) -> Dict[str, List[Dict[str, Any]]]:
+        # Implement custom conversion logic
+        pass
+```
 
 ## Dependencies
 

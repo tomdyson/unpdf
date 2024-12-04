@@ -12,6 +12,7 @@ from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from recipes.registry import registry
 from unpdf import simplify_document
 
 # Global variable to store the converter
@@ -76,8 +77,8 @@ async def get_viewer():
     return FileResponse('json-viewer.html')
 
 @app.post("/convert/upload")
-async def convert_uploaded_pdf(file: UploadFile):
-    """Convert an uploaded PDF file to JSON"""
+async def convert_uploaded_pdf(file: UploadFile, recipe: str = "default"):
+    """Convert an uploaded PDF file to JSON using specified recipe"""
     if not file.filename.lower().endswith('.pdf'):
         raise HTTPException(status_code=400, detail="File must be a PDF")
     
@@ -88,9 +89,12 @@ async def convert_uploaded_pdf(file: UploadFile):
             tmp_file.write(content)
             tmp_path = tmp_file.name
         
+        # Get the requested recipe
+        conversion_recipe = registry.get_recipe(recipe)
+        
         # Process the PDF
         result = doc_converter.convert(tmp_path)
-        simplified_doc = simplify_document(result.document)
+        simplified_doc = conversion_recipe.simplify_document(result.document)
         
         # Clean up
         os.unlink(tmp_path)
@@ -140,6 +144,19 @@ async def convert_pdf_from_url(url: str):
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
+
+@app.get("/recipes")
+async def list_recipes():
+    """List all available conversion recipes"""
+    return {
+        "recipes": [
+            {
+                "name": name,
+                "description": registry.get_recipe(name).__class__.__doc__ or ""
+            }
+            for name in registry.list_recipes()
+        ]
+    }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000) 
