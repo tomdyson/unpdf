@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Convert PDF documents into structured JSON, with a focus on financial and accounting documents"
 readme = "README.md"
 requires-python = ">=3.12"
-license = "MIT"
+license = { file = "LICENSE" }
 authors = [
     { name = "Tom Dyson", email = "tom@example.com" }
 ]
