@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from convert import simplify_document
+from unpdf import simplify_document
 
 # Global variable to store the converter
 doc_converter = None

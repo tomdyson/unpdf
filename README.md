@@ -1,6 +1,6 @@
-# UnPDF
+# unPDF
 
-Convert PDF documents into structured JSON, with a focus on financial and accounting documents. UnPDF extracts sections, paragraphs, tables, and maintains document hierarchy.
+Convert PDF documents into structured JSON. unPDF extracts headings, sections, paragraphs, tables, and maintains document hierarchy.
 
 ## Features
 
