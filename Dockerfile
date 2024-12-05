@@ -15,7 +15,7 @@ WORKDIR /app
 # Copy project files
 COPY pyproject.toml .
 COPY README.md .
-COPY amnesty-example-2.json .
+
 
 # Install dependencies into a virtual environment
 RUN uv venv
@@ -29,6 +29,7 @@ COPY --from=builder /app/.venv /app/.venv
 
 # Copy application code
 WORKDIR /app
+COPY amnesty-example-2.json .
 COPY unpdf.py .
 COPY api.py .
 COPY json-viewer.html .
