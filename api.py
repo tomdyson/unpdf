@@ -1,3 +1,5 @@
+import asyncio
+import json
 import os
 import tempfile
 from contextlib import asynccontextmanager
@@ -159,6 +161,18 @@ async def list_recipes():
             for name in registry.list_recipes()
         ]
     }
+
+@app.get("/demo")
+@app.post("/demo")
+async def demo_endpoint(time: int = 0):
+    """Demo endpoint that sleeps for specified seconds and returns sample JSON"""
+    # Sleep for requested duration
+    await asyncio.sleep(time)
+    
+    # Load and return the sample JSON
+    sample_path = Path("amnesty-example-2.json")
+    with open(sample_path) as f:
+        return json.load(f)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000) 

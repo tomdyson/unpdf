@@ -41,3 +41,6 @@ warmup.pdf
 # OS
 .DS_Store
 Thumbs.db 
+
+# Demo endpoint
+!amnesty-example-2.json
