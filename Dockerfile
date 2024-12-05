@@ -28,7 +28,7 @@ COPY --from=builder /app/.venv /app/.venv
 
 # Copy application code
 WORKDIR /app
-COPY convert.py .
+COPY unpdf.py .
 COPY api.py .
 COPY json-viewer.html .
 
