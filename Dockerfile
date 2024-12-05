@@ -31,6 +31,7 @@ WORKDIR /app
 COPY unpdf.py .
 COPY api.py .
 COPY json-viewer.html .
+COPY recipes recipes/
 
 # Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
